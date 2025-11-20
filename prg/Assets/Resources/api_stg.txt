@@ -1,0 +1,1 @@
+﻿https://stg-lottery.sammy-net.jp/api/lottery/draw

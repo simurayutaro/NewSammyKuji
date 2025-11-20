@@ -1,0 +1,83 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f1b3b4b945939a54ea0b23d3396115fb, type: 3}
+  m_Name: pachislot_SkeletonData
+  m_EditorClassIdentifier: 
+  atlasAssets:
+  - {fileID: 11400000, guid: 1bf70b55ea49f98499ca4e8f48190266, type: 2}
+  scale: 0.01
+  skeletonJSON: {fileID: 4900000, guid: 8a6b40c5aa469244ca82458cc4084246, type: 3}
+  isUpgradingBlendModeMaterials: 0
+  blendModeMaterials:
+    requiresBlendModeMaterials: 1
+    applyAdditiveMaterial: 1
+    additiveMaterials:
+    - pageName: pachislot_17.png
+      material: {fileID: 2100000, guid: 27f0aa9100627dd4290c1320d19fb9fc, type: 2}
+    - pageName: pachislot.png
+      material: {fileID: 2100000, guid: 1e1c2fbced04b934285a47192a535a82, type: 2}
+    - pageName: pachislot_8.png
+      material: {fileID: 2100000, guid: c00e59ab412f2124cb7f207bf28d2a56, type: 2}
+    - pageName: pachislot_7.png
+      material: {fileID: 2100000, guid: c6bbf226a3af33741a70289c63d06d71, type: 2}
+    - pageName: pachislot_4.png
+      material: {fileID: 2100000, guid: 49c42ebf28f9a0b45b4795a0d5157e32, type: 2}
+    - pageName: pachislot_2.png
+      material: {fileID: 2100000, guid: 1662977fcc55e8d409a8d2f262df5cb6, type: 2}
+    - pageName: pachislot_9.png
+      material: {fileID: 2100000, guid: 12727713ada418e44a556c2050393bfb, type: 2}
+    - pageName: pachislot_3.png
+      material: {fileID: 2100000, guid: d81e83b0284f4c14abbea9e1d6266b2e, type: 2}
+    - pageName: pachislot_5.png
+      material: {fileID: 2100000, guid: ff3d1d21e174bcb4385dd98c5f76bbf7, type: 2}
+    - pageName: pachislot_13.png
+      material: {fileID: 2100000, guid: e9b619f893b74224eacf0d6bda01bb5c, type: 2}
+    - pageName: pachislot_10.png
+      material: {fileID: 2100000, guid: 5d3a3e33f60be264b8790146962849b1, type: 2}
+    - pageName: pachislot_16.png
+      material: {fileID: 2100000, guid: 4552ae3d92cd9584ea661ff28a23afe6, type: 2}
+    - pageName: pachislot_12.png
+      material: {fileID: 2100000, guid: 06a78b11b8cac6c418497c87afc49a8b, type: 2}
+    - pageName: pachislot_14.png
+      material: {fileID: 2100000, guid: f8084b0a7a7b1a34fbfb5a01937df175, type: 2}
+    - pageName: pachislot_15.png
+      material: {fileID: 2100000, guid: 8d2d8e4f1e1ab034ab2c4ce7a1299f7f, type: 2}
+    - pageName: pachislot_19.png
+      material: {fileID: 2100000, guid: 6c7ea2b626041664bbe439ff379d4c5d, type: 2}
+    multiplyMaterials:
+    - pageName: pachislot_7.png
+      material: {fileID: 2100000, guid: 3108609bda49bb24588f415af7681e9a, type: 2}
+    screenMaterials:
+    - pageName: pachislot_5.png
+      material: {fileID: 2100000, guid: cf035c62d8a317f4e803df6f29b0b60b, type: 2}
+    - pageName: pachislot_9.png
+      material: {fileID: 2100000, guid: fd68b68b45ad8bf45be5a5575cb32f6b, type: 2}
+    - pageName: pachislot_4.png
+      material: {fileID: 2100000, guid: fd8d22c8deb6bc542b51ee7ec2b08275, type: 2}
+    - pageName: pachislot.png
+      material: {fileID: 2100000, guid: 35e99060aa9ef25449615f09ebe38e8b, type: 2}
+    - pageName: pachislot_8.png
+      material: {fileID: 2100000, guid: 93df8dbc68affc246b53ccebb023b5ef, type: 2}
+    - pageName: pachislot_2.png
+      material: {fileID: 2100000, guid: 65b8d7df001a66e488d04b9344137fad, type: 2}
+    - pageName: pachislot_7.png
+      material: {fileID: 2100000, guid: 56a9479cbc01919429903b1234abd149, type: 2}
+    - pageName: pachislot_6.png
+      material: {fileID: 2100000, guid: 14abb9f15debc1b44a888343ceaca5f5, type: 2}
+    - pageName: pachislot_3.png
+      material: {fileID: 2100000, guid: 3004ff6e17ad4e645b9c6a31aec89149, type: 2}
+  skeletonDataModifiers: []
+  fromAnimation: []
+  toAnimation: []
+  duration: []
+  defaultMix: 0.2
+  controller: {fileID: 0}
