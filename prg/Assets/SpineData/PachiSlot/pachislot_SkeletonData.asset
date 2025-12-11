@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   atlasAssets:
   - {fileID: 11400000, guid: 1bf70b55ea49f98499ca4e8f48190266, type: 2}
-  scale: 0.01
+  scale: 1
   skeletonJSON: {fileID: 4900000, guid: 8a6b40c5aa469244ca82458cc4084246, type: 3}
   isUpgradingBlendModeMaterials: 0
   blendModeMaterials:
@@ -53,6 +53,8 @@ MonoBehaviour:
       material: {fileID: 2100000, guid: 8d2d8e4f1e1ab034ab2c4ce7a1299f7f, type: 2}
     - pageName: pachislot_19.png
       material: {fileID: 2100000, guid: 6c7ea2b626041664bbe439ff379d4c5d, type: 2}
+    - pageName: pachislot_18.png
+      material: {fileID: 2100000, guid: 7aa53828d792fef43b6c9435dfa29ac4, type: 2}
     multiplyMaterials:
     - pageName: pachislot_7.png
       material: {fileID: 2100000, guid: 3108609bda49bb24588f415af7681e9a, type: 2}

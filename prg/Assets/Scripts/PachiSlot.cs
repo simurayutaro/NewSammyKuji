@@ -9,6 +9,7 @@ using UnityEngine.Networking;
 using System.IO;
 using System;
 using System.Text;
+using System.Threading;
 public class PachiSlot : MonoBehaviour
 {
     Bone[] boneReel = new Bone[3];
@@ -67,7 +68,37 @@ public class PachiSlot : MonoBehaviour
     private const int WAIT_MIN = 60 * 60;
     private const int WAIT_MAX = 60 * 60 * 2;
 #endif
-    private SkeletonAnimation skeletonAnimation;
+    private SkeletonAnimation _skeletonAnimation;
+    private SkeletonAnimation skeletonAnimation
+    {
+        get
+        {
+            if (_skeletonAnimation == null)
+            {
+                _skeletonAnimation = GetComponent<SkeletonAnimation>();
+            }
+            return _skeletonAnimation;
+        }
+    }
+
+    // === 動的画像はめ込み機能用 ===
+    private string dynamicImagesPath;
+    private bool isDynamicImageEnabled = false;
+    private Dictionary<string, string> slotImageMapping = new Dictionary<string, string>();
+
+    // シーン管理用
+    private GAME_STATE currentGameState = GAME_STATE.STATE_IDLE;
+    private Dictionary<GAME_STATE, Dictionary<string, bool>> sceneSlotVisibility = new Dictionary<GAME_STATE, Dictionary<string, bool>>();
+
+    // 設定可能なスロット名とファイル名のマッピング
+    private readonly Dictionary<string, string> defaultSlotMapping = new Dictionary<string, string>()
+    {
+        {"slot_dynamic_bg", "background.png"},      // 背景画像用スロット
+        {"slot_dynamic_effect", "effect.png"},     // エフェクト用スロット
+        {"slot_dynamic_chara", "character.png"},   // キャラクター用スロット
+        {"slot_dynamic_logo", "logo.png"},         // ロゴ用スロット
+        {"slot_dynamic_item", "item.png"}          // アイテム用スロット
+    };
 
     enum ANIM
     {
@@ -111,12 +142,14 @@ public class PachiSlot : MonoBehaviour
         SOUND_SE_CUTIN,
         SOUND_SE_RESULT,
 
+        TEST_HYOUJI,
+
     };
     void Awake()
     {
         GameObject gameObject = GameObject.Find("PachiSlot");
 
-        skeletonAnimation = GetComponent<SkeletonAnimation>();
+        _skeletonAnimation = GetComponent<SkeletonAnimation>();
         var skl = GetComponent<SkeletonAnimation>();
 
         animMgr = AnimMgr.GetInstance();
@@ -258,6 +291,7 @@ public class PachiSlot : MonoBehaviour
             new ANIM_TABLE{trackIndex = TRACK.FLASH, animName = "", loopFlg = false, soundIndex = SOUND.SE_REEL_CH, type = SOUND_TYPE.ONESHOT,     volume = 1.0f, videoIndex = VIDEO.NONE,videoLoop = -1,videoCH = VIDEO_CH.CH_1},
             new ANIM_TABLE{trackIndex = TRACK.FLASH, animName = "", loopFlg = false, soundIndex = SOUND.SE_CUTIN, type = SOUND_TYPE.ONESHOT,     volume = 1.0f, videoIndex = VIDEO.NONE,videoLoop = -1,videoCH = VIDEO_CH.CH_1},
             new ANIM_TABLE{trackIndex = TRACK.FLASH, animName = "", loopFlg = false, soundIndex = SOUND.SE_RESULT, type = SOUND_TYPE.ONESHOT,     volume = 1.0f, videoIndex = VIDEO.NONE,videoLoop = -1,videoCH = VIDEO_CH.CH_1},
+            new ANIM_TABLE{trackIndex = TRACK.FLASH, animName = "test_hyouji", loopFlg = true, soundIndex = SOUND.NONE, type = SOUND_TYPE.ONESHOT,     volume = 1.0f, videoIndex = VIDEO.NONE,videoLoop = -1,videoCH = VIDEO_CH.CH_3},
 
         };
         cucMgr = CUCMgr.GetInstance();
@@ -268,7 +302,11 @@ public class PachiSlot : MonoBehaviour
 
         pcName = Environment.MachineName;
 
+        // 動的画像はめ込み機能の初期化（Init_Idleより前に実行）
+        InitializeDynamicImageSystem();
+
         Init_Idle();
+
 #if DEVELOPMENT_BUILD || UNITY_EDITOR
         debugString = "";
 #endif
@@ -553,7 +591,15 @@ public class PachiSlot : MonoBehaviour
     }
     public void SetGameState(GAME_STATE state)
     {
+        GAME_STATE previousState = pachislotState;
         pachislotState = state;
+
+        // ゲーム状態が変わった場合、動的画像の表示を更新
+        if (previousState != state)
+        {
+            currentGameState = state;
+            ApplySceneSlotVisibility(state);
+        }
     }
     public void OnBet(bool flg)
     {
@@ -766,8 +812,9 @@ public class PachiSlot : MonoBehaviour
                 if (++lotnum > LOT_MAX) lotnum = LOT_MIN;
                 animMgr.SetAnim(skeletonAnimation, animTbl[(int)ANIM.SOUND_SE_TICKET]);
             }
-            //チケット表示
-            animMgr.SetAnim("ticket", lotnum.ToString(), true);
+
+            // チケット表示を更新
+            UpdateTicketDisplay();
         }
     }
     //ここで揃ったか揃わないの結果をもらい映し出す映像を変える
@@ -822,17 +869,15 @@ public class PachiSlot : MonoBehaviour
 
         animMgr.StopAudioAll();
 
-        //チケット表示
-        animMgr.AttachmentToggle(
-            skeletonAnimation,      // ← Start() で取得しているコンポーネント
-            "ticket",               // ← Spine 上の Slot 名
-            lotnum.ToString(),      // ← Spine 上の Attachment 名（例: "1" "2" ...）
-            true                    // ← 表示フラグ
-        );
+        // チケット表示を更新（動的画像対応）
+        UpdateTicketDisplay();
+
         // 背景ムービー再生
         animMgr.SetAnim(skeletonAnimation, animTbl[(int)ANIM.DEMO]);
         animMgr.SetAnim(skeletonAnimation, animTbl[(int)ANIM.OBI]);
         animMgr.SetAnim(skeletonAnimation, animTbl[(int)ANIM.SHITAPANEL]);
+        animMgr.SetAnim(skeletonAnimation, animTbl[(int)ANIM.TEST_HYOUJI]);
+
 
 
 
@@ -937,6 +982,12 @@ public class PachiSlot : MonoBehaviour
             "reel_lamp_mask_1",
             "reel_lamp_mask_2",
             "Reel_BG",
+            // 動的画像スロットも保持
+            "slot_dynamic_bg",
+            "slot_dynamic_effect",
+            "slot_dynamic_chara",
+            "slot_dynamic_logo",
+            "slot_dynamic_item",
         };
         foreach (var slot in skeleton.Slots)
         {
@@ -1598,8 +1649,228 @@ public class PachiSlot : MonoBehaviour
     {
         debugString = str;
     }
+
+    // === 動的画像はめ込み機能の実装 ===
+
+    /// <summary>
+    /// 動的画像システムの初期化
+    /// </summary>
+    private void InitializeDynamicImageSystem()
+    {
+        // StreamingAssetsフォルダ内の動的画像用フォルダパスを設定
+        dynamicImagesPath = Path.Combine(Application.streamingAssetsPath, "DynamicImages");
+
+        // フォルダが存在しない場合は作成
+        if (!Directory.Exists(dynamicImagesPath))
+        {
+            Directory.CreateDirectory(dynamicImagesPath);
+        }
+
+        // デフォルトのスロット-ファイル名マッピングをコピー
+        foreach (var mapping in defaultSlotMapping)
+        {
+            slotImageMapping[mapping.Key] = mapping.Value;
+        }
+
+        // 既存の画像ファイルをチェックして初期読み込み
+        LoadExistingImages();
+
+        isDynamicImageEnabled = true;
+
+        // デフォルトのシーン設定を初期化
+        InitializeDefaultSceneSettings();
+
+        // 現在のゲーム状態を取得して適用
+        currentGameState = GetGameState();
+        ApplySceneSlotVisibility(currentGameState);
+    }
+
+    /// <summary>
+    /// 既存の画像ファイルを読み込み
+    /// </summary>
+    private void LoadExistingImages()
+    {
+        if (!Directory.Exists(dynamicImagesPath)) return;
+
+        string[] pngFiles = Directory.GetFiles(dynamicImagesPath, "*.png");
+
+        foreach (string filePath in pngFiles)
+        {
+            string fileName = Path.GetFileName(filePath);
+            string slotName = GetSlotNameFromFileName(fileName);
+
+            if (!string.IsNullOrEmpty(slotName))
+            {
+                LoadImageToSlot(filePath, slotName);
+            }
+        }
+    }
+
+    /// <summary>
+    /// ファイル名からスロット名を取得
+    /// </summary>
+    private string GetSlotNameFromFileName(string fileName)
+    {
+        foreach (var mapping in slotImageMapping)
+        {
+            if (mapping.Value.Equals(fileName, StringComparison.OrdinalIgnoreCase))
+            {
+                return mapping.Key;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// 画像をスロットに読み込み
+    /// </summary>
+    private void LoadImageToSlot(string filePath, string slotName)
+    {
+        if (!File.Exists(filePath)) return;
+        if (skeletonAnimation == null) return;
+
+        // AnimMgrの既存メソッドを使用して画像をはめ込み
+        animMgr.SetPngToAttachment(skeletonAnimation, filePath, slotName, false, "", true);
+    }
+
+    /// <summary>
+    /// チケット表示を更新（動的画像対応）
+    /// </summary>
+    private void UpdateTicketDisplay()
+    {
+        // 動的画像ファイル名（例: ticket_1.png, ticket_2.png, ...）
+        string fileName = $"ticket_{lotnum}.png";
+        string filePath = Path.Combine(dynamicImagesPath, fileName);
+
+        // 動的画像が有効で、ファイルが存在する場合は動的画像を使用
+        if (isDynamicImageEnabled && File.Exists(filePath))
+        {
+            if (skeletonAnimation == null) return;
+
+            // "ticket" スロットに対して、動的画像をアタッチメントとして設定
+            // アタッチメント名は lotnum の文字列（"1", "2", ..., "10"）
+            animMgr.SetPngToAttachment(skeletonAnimation, filePath, "ticket", false, lotnum.ToString(), true);
+        }
+        else
+        {
+            // フォールバック: 従来のSpineアタッチメントを使用
+            animMgr.SetAnim("ticket", lotnum.ToString(), true);
+        }
+    }
+
+    /// <summary>
+    /// 動的画像システムの有効/無効切り替え
+    /// </summary>
+    public void SetDynamicImageEnabled(bool enabled)
+    {
+        isDynamicImageEnabled = enabled;
+    }
+
+    /// <summary>
+    /// 特定スロットの画像を表示/非表示切り替え
+    /// </summary>
+    public void SetSlotVisible(string slotName, bool visible)
+    {
+        if (skeletonAnimation != null)
+        {
+            Slot slot = skeletonAnimation.Skeleton.FindSlot(slotName);
+            if (slot != null)
+            {
+                if (visible)
+                {
+                    // 対応する画像ファイルがあるかチェックして読み込み
+                    string fileName = slotImageMapping.ContainsKey(slotName) ? slotImageMapping[slotName] : null;
+                    if (!string.IsNullOrEmpty(fileName))
+                    {
+                        string filePath = Path.Combine(dynamicImagesPath, fileName);
+                        if (File.Exists(filePath))
+                        {
+                            LoadImageToSlot(filePath, slotName);
+                        }
+                    }
+                }
+                else
+                {
+                    // アタッチメントをnullにして非表示
+                    slot.Attachment = null;
+                }
+            }
+        }
+    }
+
+    // === シーン管理システム ===
+
+    /// <summary>
+    /// 特定のゲーム状態での各スロットの表示設定を行う
+    /// </summary>
+    public void SetSceneSlotVisibility(GAME_STATE gameState, string slotName, bool visible)
+    {
+        if (!sceneSlotVisibility.ContainsKey(gameState))
+        {
+            sceneSlotVisibility[gameState] = new Dictionary<string, bool>();
+        }
+
+        sceneSlotVisibility[gameState][slotName] = visible;
+
+        // 現在のゲーム状態の場合は即座に反映
+        if (currentGameState == gameState)
+        {
+            SetSlotVisible(slotName, visible);
+        }
+
+    }
+
+    /// <summary>
+    /// ゲーム状態に基づいて動的画像の表示を適用
+    /// </summary>
+    private void ApplySceneSlotVisibility(GAME_STATE gameState)
+    {
+        if (sceneSlotVisibility.ContainsKey(gameState))
+        {
+            foreach (var slotVisibility in sceneSlotVisibility[gameState])
+            {
+                SetSlotVisible(slotVisibility.Key, slotVisibility.Value);
+            }
+        }
+    }
+
+    /// <summary>
+    /// デフォルトのシーン表示設定を初期化
+    /// </summary>
+    private void InitializeDefaultSceneSettings()
+    {
+        // STATE_IDLE（待機状態）での表示設定
+        SetSceneSlotVisibility(GAME_STATE.STATE_IDLE, "slot_dynamic_bg", true);      // 背景表示
+        SetSceneSlotVisibility(GAME_STATE.STATE_IDLE, "slot_dynamic_effect", false); // エフェクト非表示
+        SetSceneSlotVisibility(GAME_STATE.STATE_IDLE, "slot_dynamic_chara", true);   // キャラクター表示
+        SetSceneSlotVisibility(GAME_STATE.STATE_IDLE, "slot_dynamic_logo", true);    // ロゴ表示
+        SetSceneSlotVisibility(GAME_STATE.STATE_IDLE, "slot_dynamic_item", false);   // アイテム非表示
+
+        // STATE_BET（ベット状態）での表示設定
+        SetSceneSlotVisibility(GAME_STATE.STATE_BET, "slot_dynamic_bg", false);       // 背景表示
+        SetSceneSlotVisibility(GAME_STATE.STATE_BET, "slot_dynamic_effect", false);  // エフェクト非表示
+        SetSceneSlotVisibility(GAME_STATE.STATE_BET, "slot_dynamic_chara", true);    // キャラクター表示
+        SetSceneSlotVisibility(GAME_STATE.STATE_BET, "slot_dynamic_logo", false);    // ロゴ非表示
+        SetSceneSlotVisibility(GAME_STATE.STATE_BET, "slot_dynamic_item", true);     // アイテム表示
+
+        // STATE_LEVER（レバー状態）での表示設定
+        SetSceneSlotVisibility(GAME_STATE.STATE_LEVER, "slot_dynamic_bg", false);     // 背景表示
+        SetSceneSlotVisibility(GAME_STATE.STATE_LEVER, "slot_dynamic_effect", true); // エフェクト表示
+        SetSceneSlotVisibility(GAME_STATE.STATE_LEVER, "slot_dynamic_chara", true);  // キャラクター表示
+        SetSceneSlotVisibility(GAME_STATE.STATE_LEVER, "slot_dynamic_logo", false);  // ロゴ非表示
+        SetSceneSlotVisibility(GAME_STATE.STATE_LEVER, "slot_dynamic_item", false);  // アイテム非表示
+
+        // STATE_END（終了状態）での表示設定
+        SetSceneSlotVisibility(GAME_STATE.STATE_END, "slot_dynamic_bg", false);      // 背景非表示
+        SetSceneSlotVisibility(GAME_STATE.STATE_END, "slot_dynamic_effect", true);   // エフェクト表示
+        SetSceneSlotVisibility(GAME_STATE.STATE_END, "slot_dynamic_chara", false);   // キャラクター非表示
+        SetSceneSlotVisibility(GAME_STATE.STATE_END, "slot_dynamic_logo", false);    // ロゴ非表示
+        SetSceneSlotVisibility(GAME_STATE.STATE_END, "slot_dynamic_item", true);     // アイテム表示
+    }
+
     private void OnDestroy()
     {
+        // クリーンアップ
         if (animMgr != null)
         {
             animMgr.Dispose();
